@@ -1,41 +1,77 @@
-# GoReleaser configuration
-# Make sure to check the documentation at https://goreleaser.com
-
 version: 2
-
-project_name: cloudtrail-log-parser
 
 before:
   hooks:
     - go mod tidy
+    - go mod download
+
+project_name: cloudtrail-log-parser
 
 builds:
-  - id: cloudtrail-log-parser
+  - id: binary
+    dir: .
     main: ./cmd/main.go
-    binary: cloudtrail-log-parser
+    binary: "{{ .ProjectName }}"
     env:
       - CGO_ENABLED=0
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -tags=lambda.norpc
+      - -trimpath
+    ldflags:
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
+      - -X main.date={{.Date}}
+      - -s -w
+      - -extldflags "-static"
     goos:
       - linux
     goarch:
       - amd64
       - arm64
+
+  - id: lambda
+    dir: .
+    main: ./cmd/main.go
+    binary: "bootstrap"
+    env:
+      - CGO_ENABLED=0
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -tags=lambda.norpc
+      - -trimpath
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
+      - -X main.date={{.Date}}
+      - -s -w
+      - -extldflags "-static"
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
 
 archives:
-  - id: default
-    format: tar.gz
+  - id: binary
+    ids: [binary]
+    formats: ["tar.gz"]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    files:
-      - LICENSE*
-      - README*
 
-checksum:
-  name_template: "checksums.txt"
+  - id: lambda
+    ids: [lambda]
+    formats: ["zip"]
+    name_template: "{{ .ProjectName }}-lambda_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 snapshot:
-  version_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ .Tag }}-next"
+
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
+  algorithm: sha256
+
+release:
+  draft: false
 
 changelog:
   sort: asc
@@ -43,23 +79,18 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
-      - "^chore:"
       - "^ci:"
+      - "^build:"
+
   groups:
     - title: Features
-      regexp: "^feat"
+      regexp: "^.*feat[(\\w)]*:+.*$"
       order: 0
-    - title: Bug Fixes
-      regexp: "^fix"
+    - title: "Bug fixes"
+      regexp: "^.*fix[(\\w)]*:+.*$"
       order: 1
+    - title: "Security"
+      regexp: "^.*sec[(\\w)]*:+.*$"
+      order: 2
     - title: Others
       order: 999
-
-release:
-  github:
-    owner: "{{ .Env.GITHUB_REPOSITORY_OWNER }}"
-    name: "{{ .ProjectName }}"
-  draft: false
-  prerelease: auto
-  name_template: "{{ .ProjectName }} v{{ .Version }}"
-  mode: replace

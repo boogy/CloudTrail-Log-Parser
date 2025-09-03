@@ -309,7 +309,49 @@ For more examples and advanced configurations, see [DEVELOPER_GUIDE.md](DEVELOPE
 
 For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
 
-#### Quick Deploy
+#### Quick Deploy Options
+
+##### Option 1: Use Pre-built Lambda ZIP from Releases
+
+Download the Lambda-ready ZIP package directly from [GitHub Releases](https://github.com/boogy/cloudtrail-log-parser/releases):
+- `cloudtrail-log-parser-lambda_<version>_linux_amd64.zip` - For x86_64 Lambda functions
+- `cloudtrail-log-parser-lambda_<version>_linux_arm64.zip` - For ARM64 (Graviton2) Lambda functions
+
+These ZIPs contain the `bootstrap` binary ready for AWS Lambda deployment.
+
+##### Option 2: Use Docker Images for Lambda
+
+Docker images are published to both GitHub Container Registry and Docker Hub for direct use with AWS Lambda Container Image support:
+
+**GitHub Container Registry:**
+```bash
+# Latest version
+ghcr.io/boogy/cloudtrail-log-parser:latest
+
+# Specific version
+ghcr.io/boogy/cloudtrail-log-parser:v1.0.0
+```
+
+**Docker Hub:**
+```bash
+# Latest version
+docker.io/boogy/cloudtrail-log-parser:latest
+
+# Specific version  
+docker.io/boogy/cloudtrail-log-parser:v1.0.0
+```
+
+Deploy Lambda using container image:
+```bash
+aws lambda create-function \
+  --function-name cloudtrail-log-parser \
+  --package-type Image \
+  --code ImageUri=ghcr.io/boogy/cloudtrail-log-parser:latest \
+  --role arn:aws:iam::123456789012:role/lambda-role \
+  --architectures arm64  # or x86_64
+```
+
+##### Option 3: Build from Source
 
 1. **Build the Lambda package**:
 ```bash

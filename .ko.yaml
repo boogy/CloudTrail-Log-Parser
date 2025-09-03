@@ -13,23 +13,22 @@ builds:
     ldflags:
       - -extldflags "-static"
       - -s -w
-      - -X ctlp/internal/version.Version={{.Git.Tag}}
-      - -X ctlp/internal/version.Commit={{.Git.ShortCommit}}
-      - -X ctlp/internal/version.Date={{.Date}}
+      - -X main.version={{.Git.Tag}}
+      - -X main.commit={{.Git.ShortCommit}}
+      - -X main.date={{.Date}}
     flags:
       - -tags=lambda.norpc
       - -trimpath
     tags:
       - "{{.Git.Tag}}"
-      - "{{.Git.Tag}}-apigateway"
       - latest
 
 labels:
-  org.opencontainers.image.title: "AWS OIDC Warden"
+  org.opencontainers.image.title: "AWS CloudTrail Log Parser"
   org.opencontainers.image.version: "{{.Git.Tag}}"
   org.opencontainers.image.revision: "{{.Git.ShortCommit}}"
   org.opencontainers.image.created: "{{.Date}}"
-  org.opencontainers.image.description: "CloudTrail Log Parser - Parse AWS CloudTrail logs efficiently to reduce logs noise."
-  org.opencontainers.image.source: "https://github.com/boogy/cloudtrail-log-parser"
+  org.opencontainers.image.description: "CloudTrail Log Parser - Parse AWS CloudTrail logs efficiently to reduce noise and cost."
+  org.opencontainers.image.source: "https://github.com/boogy/CloudTrail-Log-Parser"
   org.opencontainers.image.licenses: "Apache License 2.0"
   io.buildpacks.build.metadata: '{"aws_lambda_function_handler": "bootstrap"}'
