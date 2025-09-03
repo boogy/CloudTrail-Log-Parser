@@ -6,7 +6,7 @@ on:
       - "*"
 
 env:
-  REPO_NAME: cloudtrail-parser
+  REPO_NAME: cloudtrail-log-parser
   GHCR_REGISTRY: ghcr.io
   DOCKERHUB_REGISTRY: docker.io
 
@@ -54,7 +54,7 @@ jobs:
           echo "Building and pushing to GHCR..."
           echo "KO_DOCKER_REPO: $KO_DOCKER_REPO"
           echo "VERSION: $VERSION"
-          ko publish ./cmd/main.go --tags=$VERSION,latest --bare
+          ko publish ./cmd --tags=$VERSION,latest --bare
         timeout-minutes: 15
 
       - name: Build and push
@@ -65,7 +65,7 @@ jobs:
           echo "Building and pushing to Docker Hub..."
           echo "KO_DOCKER_REPO: $KO_DOCKER_REPO"
           echo "VERSION: $VERSION"
-          ko publish ./cmd/main.go --tags=$VERSION,latest --bare
+          ko publish ./cmd --tags=$VERSION,latest --bare
         timeout-minutes: 15
 
   security-scan:
