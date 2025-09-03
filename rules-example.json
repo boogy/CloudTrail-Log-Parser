@@ -1,0 +1,357 @@
+{
+  "version": "1.0.0",
+  "meta": {
+    "Description": "Example CloudTrail filtering rules for common AWS services",
+    "Author": "security-team",
+    "CreatedAt": "2024-01-01",
+    "UpdatedAt": "2024-01-15",
+    "Tags": ["production", "security", "cost-optimization"],
+    "Labels": { "environment": "production", "team": "security" }
+  },
+  "rules": [
+    {
+      "matches": [
+        {
+          "field_name": "eventName",
+          "regex": "^(Decrypt|Encrypt|Sign|GenerateDataKey)$"
+        },
+        { "field_name": "eventSource", "regex": "^kms\\.amazonaws\\.com$" },
+        { "field_name": "sourceIPAddress", "regex": "^eks\\.amazonaws\\.com$" }
+      ],
+      "name": "EKS KMS Operations"
+    },
+    {
+      "matches": [
+        { "field_name": "eventName", "regex": "^DescribeLaunchTemplate.*$" },
+        { "field_name": "eventSource", "regex": "^ec2\\.amazonaws\\.com$" },
+        {
+          "field_name": "sourceIPAddress",
+          "regex": "^eks-nodegroup\\.amazonaws\\.com$"
+        },
+        {
+          "field_name": "userIdentity.sessionContext.sessionIssuer.arn",
+          "regex": "^arn:aws:iam::\\d{12}:role/aws-service-role/eks-nodegroup\\.amazonaws\\.com/AWSServiceRoleForAmazonEKSNodegroup$"
+        }
+      ],
+      "name": "EKS Nodegroup Launch Templates"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventName",
+          "regex": "^Describe(Cluster|Nodegroup|Update|Addon)$"
+        },
+        { "field_name": "eventSource", "regex": "^eks\\.amazonaws\\.com$" },
+        {
+          "field_name": "userIdentity.sessionContext.sessionIssuer.arn",
+          "regex": "AWSServiceRoleForAmazonEKS"
+        }
+      ],
+      "name": "EKS Describe Operations"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventName",
+          "regex": "^(AssumeRole|GetCallerIdentity|GetSessionToken)$"
+        },
+        { "field_name": "eventSource", "regex": "^sts\\.amazonaws\\.com$" },
+        {
+          "field_name": "userIdentity.sessionContext.sessionIssuer.arn",
+          "regex": "^arn:aws:iam::\\d{12}:role/(aws-service-role|service-role)/.*$"
+        }
+      ],
+      "name": "Service Role STS Operations"
+    },
+    {
+      "matches": [
+        { "field_name": "eventName", "regex": "^AssumeRole$" },
+        {
+          "field_name": "requestParameters.roleSessionName",
+          "regex": "^(botocore-session-|aws-sdk-|terraform-)\\d+"
+        },
+        { "field_name": "userIdentity.type", "regex": "^AssumedRole$" }
+      ],
+      "name": "IAM Session Renewals"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventName",
+          "regex": "^(CreateLogStream|PutLogEvents|CreateLogGroup)$"
+        },
+        { "field_name": "eventSource", "regex": "^logs\\.amazonaws\\.com$" },
+        {
+          "field_name": "userIdentity.sessionContext.sessionIssuer.type",
+          "regex": "^Role$"
+        },
+        {
+          "field_name": "userIdentity.sessionContext.sessionIssuer.principalId",
+          "regex": "^AROA.*:aws-lambda-.*$"
+        }
+      ],
+      "name": "Lambda CloudWatch Logs"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventSource",
+          "regex": "^(cloudwatch|logs|ec2)\\.amazonaws\\.com$"
+        },
+        {
+          "field_name": "userIdentity.sessionContext.sessionIssuer.arn",
+          "regex": "datadog-integration"
+        },
+        { "field_name": "eventName", "regex": "^(Describe|List|Get).*$" }
+      ],
+      "name": "DataDog Integration"
+    },
+    {
+      "matches": [
+        { "field_name": "eventSource", "regex": ".*\\.amazonaws\\.com$" },
+        {
+          "field_name": "userIdentity.invokedBy",
+          "regex": "^config\\.amazonaws\\.com$"
+        },
+        { "field_name": "eventName", "regex": "^(Describe|List|Get).*$" }
+      ],
+      "name": "AWS Config Recorder"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventName",
+          "regex": "^(GetBucketLifecycle|GetBucketNotification|GetBucketReplication)$"
+        },
+        { "field_name": "eventSource", "regex": "^s3\\.amazonaws\\.com$" },
+        {
+          "field_name": "userIdentity.invokedBy",
+          "regex": "^(s3\\.amazonaws\\.com|replication\\.s3\\.amazonaws\\.com)$"
+        }
+      ],
+      "name": "S3 Automated Operations"
+    },
+    {
+      "matches": [
+        { "field_name": "eventName", "regex": "^GetObject$" },
+        { "field_name": "eventSource", "regex": "^s3\\.amazonaws\\.com$" },
+        { "field_name": "userIdentity.accountId", "regex": "^amazon-cf$" }
+      ],
+      "name": "CloudFront S3 Access"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventName",
+          "regex": "^(DescribeInstances|DescribeInstanceAttribute|DescribeInstanceStatus)$"
+        },
+        { "field_name": "eventSource", "regex": "^ec2\\.amazonaws\\.com$" },
+        { "field_name": "sourceIPAddress", "regex": "^ec2\\.amazonaws\\.com$" }
+      ],
+      "name": "EC2 Instance Metadata"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventName",
+          "regex": "^(GetFunction|GetLayerVersion|InvokeFunction)$"
+        },
+        { "field_name": "eventSource", "regex": "^lambda\\.amazonaws\\.com$" },
+        {
+          "field_name": "userIdentity.invokedBy",
+          "regex": "^lambda\\.amazonaws\\.com$"
+        }
+      ],
+      "name": "Lambda Internal Operations"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventName",
+          "regex": "^(DescribeAutoScalingGroups|DescribeScalingActivities)$"
+        },
+        {
+          "field_name": "eventSource",
+          "regex": "^autoscaling\\.amazonaws\\.com$"
+        },
+        { "field_name": "userIdentity.type", "regex": "^AssumedRole$" },
+        { "field_name": "userAgent", "regex": "health-check" }
+      ],
+      "name": "Auto Scaling Health Checks"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventName",
+          "regex": "^(CreateDBSnapshot|CopyDBSnapshot|DescribeDBSnapshots)$"
+        },
+        { "field_name": "eventSource", "regex": "^rds\\.amazonaws\\.com$" },
+        {
+          "field_name": "userIdentity.invokedBy",
+          "regex": "^rds\\.amazonaws\\.com$"
+        }
+      ],
+      "name": "RDS Automated Backups"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventName",
+          "regex": "^(UpdateTable|DescribeTable|UpdateTimeToLive)$"
+        },
+        {
+          "field_name": "eventSource",
+          "regex": "^dynamodb\\.amazonaws\\.com$"
+        },
+        {
+          "field_name": "userIdentity.sessionContext.sessionIssuer.principalId",
+          "regex": "dynamodb-application-autoscaling"
+        }
+      ],
+      "name": "DynamoDB Auto Scaling"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventName",
+          "regex": "^(CreateLogStream|PutLogEvents)$"
+        },
+        { "field_name": "eventSource", "regex": "^logs\\.amazonaws\\.com$" },
+        {
+          "field_name": "requestParameters.logGroupName",
+          "regex": "/aws/vpc/flowlogs"
+        }
+      ],
+      "name": "VPC Flow Logs"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventName",
+          "regex": "^(GetHealthCheck|GetHealthCheckStatus)$"
+        },
+        { "field_name": "eventSource", "regex": "^route53\\.amazonaws\\.com$" },
+        {
+          "field_name": "sourceIPAddress",
+          "regex": "^route53healthchecker\\.amazonaws\\.com$"
+        }
+      ],
+      "name": "Route53 Health Checks"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventName",
+          "regex": "^(BatchImportFindings|GetFindings)$"
+        },
+        {
+          "field_name": "eventSource",
+          "regex": "^securityhub\\.amazonaws\\.com$"
+        },
+        { "field_name": "userIdentity.type", "regex": "^AssumedRole$" },
+        {
+          "field_name": "userIdentity.sessionContext.sessionIssuer.principalId",
+          "regex": "aws-securityhub"
+        }
+      ],
+      "name": "Security Hub Findings Collection"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventSource",
+          "regex": "^guardduty\\.amazonaws\\.com$"
+        },
+        {
+          "field_name": "eventName",
+          "regex": "^(GetDetector|ListFindings|GetFindings)$"
+        },
+        {
+          "field_name": "userIdentity.invokedBy",
+          "regex": "^guardduty\\.amazonaws\\.com$"
+        }
+      ],
+      "name": "GuardDuty Internal Operations"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventSource",
+          "regex": "^codebuild\\.amazonaws\\.com$"
+        },
+        {
+          "field_name": "eventName",
+          "regex": "^(BatchGetBuilds|ListBuildsForProject)$"
+        },
+        {
+          "field_name": "userIdentity.sessionContext.sessionIssuer.principalId",
+          "regex": "codebuild\\.amazonaws\\.com"
+        }
+      ],
+      "name": "CodeBuild Operations"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventSource",
+          "regex": "^codepipeline\\.amazonaws\\.com$"
+        },
+        {
+          "field_name": "eventName",
+          "regex": "^(GetPipelineExecution|GetPipelineState)$"
+        },
+        { "field_name": "userIdentity.type", "regex": "^AssumedRole$" }
+      ],
+      "name": "CodePipeline Executions"
+    },
+    {
+      "matches": [
+        { "field_name": "eventName", "regex": "^(GetObject|PutObject)$" },
+        { "field_name": "eventSource", "regex": "^s3\\.amazonaws\\.com$" },
+        { "field_name": "requestParameters.key", "regex": ".*\\.tfstate.*" },
+        { "field_name": "userAgent", "regex": ".*Terraform.*" }
+      ],
+      "name": "Terraform State Operations"
+    },
+    {
+      "matches": [
+        { "field_name": "eventName", "regex": "^AssumeRoleWithWebIdentity$" },
+        { "field_name": "eventSource", "regex": "^sts\\.amazonaws\\.com$" },
+        {
+          "field_name": "requestParameters.roleArn",
+          "regex": ".*:role/.*-eks-.*-irsa-.*"
+        }
+      ],
+      "name": "Kubernetes Service Accounts"
+    },
+    {
+      "matches": [
+        { "field_name": "eventName", "regex": "^Describe.*$" },
+        { "field_name": "readOnly", "regex": "^true$" },
+        {
+          "field_name": "userAgent",
+          "regex": "^(aws-cli|boto3|aws-sdk-go|aws-sdk-java).*$"
+        },
+        {
+          "field_name": "errorCode",
+          "regex": "^(AccessDenied|UnauthorizedOperation)$"
+        }
+      ],
+      "name": "Automated Tool Describe Operations"
+    },
+    {
+      "matches": [
+        {
+          "field_name": "eventSource",
+          "regex": "^cloudformation\\.amazonaws\\.com$"
+        },
+        {
+          "field_name": "eventName",
+          "regex": "^(DetectStackDrift|DescribeStackDriftDetectionStatus)$"
+        },
+        { "field_name": "userIdentity.type", "regex": "^AssumedRole$" }
+      ],
+      "name": "CloudFormation Drift Detection"
+    }
+  ]
+}

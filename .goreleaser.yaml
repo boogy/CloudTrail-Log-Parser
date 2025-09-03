@@ -1,0 +1,65 @@
+# GoReleaser configuration
+# Make sure to check the documentation at https://goreleaser.com
+
+version: 2
+
+project_name: cloudtrail-log-parser
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: cloudtrail-log-parser
+    main: ./cmd/main.go
+    binary: cloudtrail-log-parser
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE*
+      - README*
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+  groups:
+    - title: Features
+      regexp: "^feat"
+      order: 0
+    - title: Bug Fixes
+      regexp: "^fix"
+      order: 1
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: "{{ .Env.GITHUB_REPOSITORY_OWNER }}"
+    name: "{{ .ProjectName }}"
+  draft: false
+  prerelease: auto
+  name_template: "{{ .ProjectName }} v{{ .Version }}"
+  mode: replace

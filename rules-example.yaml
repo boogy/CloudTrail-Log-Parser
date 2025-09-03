@@ -1,0 +1,354 @@
+---
+# ============================================================================
+# NOTES ON REGEX PATTERNS
+# ============================================================================
+#
+# 1. Use anchors (^ and $) to match exact strings:
+#    - "^eventName$" matches exactly "eventName"
+#    - "eventName" matches any string containing "eventName"
+#
+# 2. Escape special regex characters:
+#    - Use \\. for literal dots (e.g., "s3\\.amazonaws\\.com")
+#    - Use \\d for digits, \\w for word characters
+#
+# 3. Common patterns:
+#    - "^arn:aws:iam::\\d{12}:role/.*$" - Matches IAM role ARNs
+#    - "^(Option1|Option2|Option3)$" - Matches any of the options
+#    - ".*pattern.*" - Contains pattern anywhere
+#
+# 4. Performance tips:
+#    - More specific patterns filter faster
+#    - Order rules by frequency (most common first)
+#    - Combine related conditions in single rules
+#
+# ============================================================================
+# CloudTrail Log Parser - Example Configuration
+# This file demonstrates how to configure filtering rules for CloudTrail logs
+#
+# The service will DROP/FILTER events that match ALL conditions within a rule
+# If ANY rule matches, the event is filtered out
+
+# Configuration version (supports semantic versioning)
+version: 1.0.0
+
+# Optional metadata for tracking and documentation
+meta:
+  description: Example CloudTrail filtering rules for common AWS services
+  author: security-team
+  created_at: 2024-01-01
+  updated_at: 2024-01-15
+  tags:
+    - production
+    - security
+    - cost-optimization
+  labels:
+    environment: production
+    team: security
+
+# Filtering rules
+rules:
+  # ============================================================================
+  # KUBERNETES/EKS RELATED EVENTS
+  # ============================================================================
+
+  # Filter KMS operations from EKS clusters (high volume, low value)
+  - name: EKS KMS Operations
+    matches:
+      - field_name: eventName
+        regex: "^(Decrypt|Encrypt|Sign|GenerateDataKey)$"
+      - field_name: eventSource
+        regex: "^kms\\.amazonaws\\.com$"
+      - field_name: sourceIPAddress
+        regex: "^eks\\.amazonaws\\.com$"
+
+  # Filter EKS nodegroup launch template operations
+  - name: EKS Nodegroup Launch Templates
+    matches:
+      - field_name: eventName
+        regex: "^DescribeLaunchTemplate.*$"
+      - field_name: eventSource
+        regex: "^ec2\\.amazonaws\\.com$"
+      - field_name: sourceIPAddress
+        regex: "^eks-nodegroup\\.amazonaws\\.com$"
+      - field_name: userIdentity.sessionContext.sessionIssuer.arn
+        regex: "^arn:aws:iam::\\d{12}:role/aws-service-role/eks-nodegroup\\.amazonaws\\.com/AWSServiceRoleForAmazonEKSNodegroup$"
+
+  # Filter EKS cluster describe operations (frequent, non-security relevant)
+  - name: EKS Describe Operations
+    matches:
+      - field_name: eventName
+        regex: "^Describe(Cluster|Nodegroup|Update|Addon)$"
+      - field_name: eventSource
+        regex: "^eks\\.amazonaws\\.com$"
+      - field_name: userIdentity.sessionContext.sessionIssuer.arn
+        regex: "AWSServiceRoleForAmazonEKS$"
+
+  # ============================================================================
+  # IAM AND AUTHENTICATION EVENTS
+  # ============================================================================
+
+  # Filter frequent STS operations from known service roles
+  - name: Service Role STS Operations
+    matches:
+      - field_name: eventName
+        regex: "^(AssumeRole|GetCallerIdentity|GetSessionToken)$"
+      - field_name: eventSource
+        regex: "^sts\\.amazonaws\\.com$"
+      - field_name: userIdentity.sessionContext.sessionIssuer.arn
+        regex: "^arn:aws:iam::\\d{12}:role/(aws-service-role|service-role)/.*$"
+
+  # Filter IAM role session renewals
+  - name: IAM Session Renewals
+    matches:
+      - field_name: eventName
+        regex: "^AssumeRole$"
+      - field_name: requestParameters.roleSessionName
+        regex: "^(botocore-session-|aws-sdk-|terraform-)\\d+"
+      - field_name: userIdentity.type
+        regex: "^AssumedRole$"
+
+  # ============================================================================
+  # MONITORING AND LOGGING SERVICES
+  # ============================================================================
+
+  # Filter CloudWatch Logs operations from Lambda
+  - name: Lambda CloudWatch Logs
+    matches:
+      - field_name: eventName
+        regex: "^(CreateLogStream|PutLogEvents|CreateLogGroup)$"
+      - field_name: eventSource
+        regex: "^logs\\.amazonaws\\.com$"
+      - field_name: userIdentity.sessionContext.sessionIssuer.type
+        regex: "^Role$"
+      - field_name: userIdentity.sessionContext.sessionIssuer.principalId
+        regex: "^AROA.*:aws-lambda-.*$"
+
+  # Filter DataDog integration operations
+  - name: DataDog Integration
+    matches:
+      - field_name: eventSource
+        regex: "^(cloudwatch|logs|ec2)\\.amazonaws\\.com$"
+      - field_name: userIdentity.sessionContext.sessionIssuer.arn
+        regex: "datadog-integration"
+      - field_name: eventName
+        regex: "^(Describe|List|Get).*$"
+
+  # Filter AWS Config recorder operations
+  - name: AWS Config Recorder
+    matches:
+      - field_name: eventSource
+        regex: ".*\\.amazonaws\\.com$"
+      - field_name: userIdentity.invokedBy
+        regex: "^config\\.amazonaws\\.com$"
+      - field_name: eventName
+        regex: "^(Describe|List|Get).*$"
+
+  # ============================================================================
+  # STORAGE SERVICES
+  # ============================================================================
+
+  # Filter S3 bucket notifications and lifecycle operations
+  - name: S3 Automated Operations
+    matches:
+      - field_name: eventName
+        regex: "^(GetBucketLifecycle|GetBucketNotification|GetBucketReplication)$"
+      - field_name: eventSource
+        regex: "^s3\\.amazonaws\\.com$"
+      - field_name: userIdentity.invokedBy
+        regex: "^(s3\\.amazonaws\\.com|replication\\.s3\\.amazonaws\\.com)$"
+
+  # Filter S3 access from CloudFront distributions
+  - name: CloudFront S3 Access
+    matches:
+      - field_name: eventName
+        regex: "^GetObject$"
+      - field_name: eventSource
+        regex: "^s3\\.amazonaws\\.com$"
+      - field_name: userIdentity.accountId
+        regex: "^amazon-cf$"
+
+  # ============================================================================
+  # COMPUTE SERVICES
+  # ============================================================================
+
+  # Filter EC2 instance metadata operations
+  - name: EC2 Instance Metadata
+    matches:
+      - field_name: eventName
+        regex: "^(DescribeInstances|DescribeInstanceAttribute|DescribeInstanceStatus)$"
+      - field_name: eventSource
+        regex: "^ec2\\.amazonaws\\.com$"
+      - field_name: sourceIPAddress
+        regex: "^ec2\\.amazonaws\\.com$"
+
+  # Filter Lambda internal operations
+  - name: Lambda Internal Operations
+    matches:
+      - field_name: eventName
+        regex: "^(GetFunction|GetLayerVersion|InvokeFunction)$"
+      - field_name: eventSource
+        regex: "^lambda\\.amazonaws\\.com$"
+      - field_name: userIdentity.invokedBy
+        regex: "^lambda\\.amazonaws\\.com$"
+
+  # Filter Auto Scaling health checks
+  - name: Auto Scaling Health Checks
+    matches:
+      - field_name: eventName
+        regex: "^(DescribeAutoScalingGroups|DescribeScalingActivities)$"
+      - field_name: eventSource
+        regex: "^autoscaling\\.amazonaws\\.com$"
+      - field_name: userIdentity.type
+        regex: "^AssumedRole$"
+      - field_name: userAgent
+        regex: "health-check"
+
+  # ============================================================================
+  # DATABASE SERVICES
+  # ============================================================================
+
+  # Filter RDS automated backup operations
+  - name: RDS Automated Backups
+    matches:
+      - field_name: eventName
+        regex: "^(CreateDBSnapshot|CopyDBSnapshot|DescribeDBSnapshots)$"
+      - field_name: eventSource
+        regex: "^rds\\.amazonaws\\.com$"
+      - field_name: userIdentity.invokedBy
+        regex: "^rds\\.amazonaws\\.com$"
+
+  # Filter DynamoDB auto-scaling operations
+  - name: DynamoDB Auto Scaling
+    matches:
+      - field_name: eventName
+        regex: "^(UpdateTable|DescribeTable|UpdateTimeToLive)$"
+      - field_name: eventSource
+        regex: "^dynamodb\\.amazonaws\\.com$"
+      - field_name: userIdentity.sessionContext.sessionIssuer.principalId
+        regex: "dynamodb-application-autoscaling"
+
+  # ============================================================================
+  # NETWORKING SERVICES
+  # ============================================================================
+
+  # Filter VPC Flow Logs operations
+  - name: VPC Flow Logs
+    matches:
+      - field_name: eventName
+        regex: "^(CreateLogStream|PutLogEvents)$"
+      - field_name: eventSource
+        regex: "^logs\\.amazonaws\\.com$"
+      - field_name: requestParameters.logGroupName
+        regex: "/aws/vpc/flowlogs"
+
+  # Filter Route53 health check operations
+  - name: Route53 Health Checks
+    matches:
+      - field_name: eventName
+        regex: "^(GetHealthCheck|GetHealthCheckStatus)$"
+      - field_name: eventSource
+        regex: "^route53\\.amazonaws\\.com$"
+      - field_name: sourceIPAddress
+        regex: "^route53healthchecker\\.amazonaws\\.com$"
+
+  # ============================================================================
+  # SECURITY SERVICES
+  # ============================================================================
+
+  # Filter AWS Security Hub findings collection
+  - name: Security Hub Findings Collection
+    matches:
+      - field_name: eventName
+        regex: "^(BatchImportFindings|GetFindings)$"
+      - field_name: eventSource
+        regex: "^securityhub\\.amazonaws\\.com$"
+      - field_name: userIdentity.type
+        regex: "^AssumedRole$"
+      - field_name: userIdentity.sessionContext.sessionIssuer.principalId
+        regex: "aws-securityhub"
+
+  # Filter GuardDuty internal operations
+  - name: GuardDuty Internal Operations
+    matches:
+      - field_name: eventSource
+        regex: "^guardduty\\.amazonaws\\.com$"
+      - field_name: eventName
+        regex: "^(GetDetector|ListFindings|GetFindings)$"
+      - field_name: userIdentity.invokedBy
+        regex: "^guardduty\\.amazonaws\\.com$"
+
+  # ============================================================================
+  # DEVELOPMENT AND CI/CD
+  # ============================================================================
+
+  # Filter CodeBuild project operations
+  - name: CodeBuild Operations
+    matches:
+      - field_name: eventSource
+        regex: "^codebuild\\.amazonaws\\.com$"
+      - field_name: eventName
+        regex: "^(BatchGetBuilds|ListBuildsForProject)$"
+      - field_name: userIdentity.sessionContext.sessionIssuer.principalId
+        regex: "codebuild\\.amazonaws\\.com"
+
+  # Filter CodePipeline executions
+  - name: CodePipeline Executions
+    matches:
+      - field_name: eventSource
+        regex: "^codepipeline\\.amazonaws\\.com$"
+      - field_name: eventName
+        regex: "^(GetPipelineExecution|GetPipelineState)$"
+      - field_name: userIdentity.type
+        regex: "^AssumedRole$"
+
+  # ============================================================================
+  # THIRD-PARTY INTEGRATIONS
+  # ============================================================================
+
+  # Filter Terraform state operations
+  - name: Terraform State Operations
+    matches:
+      - field_name: eventName
+        regex: "^(GetObject|PutObject)$"
+      - field_name: eventSource
+        regex: "^s3\\.amazonaws\\.com$"
+      - field_name: requestParameters.key
+        regex: ".*\\.tfstate.*"
+      - field_name: userAgent
+        regex: ".*Terraform.*"
+
+  # Filter Kubernetes service account operations
+  - name: Kubernetes Service Accounts
+    matches:
+      - field_name: eventName
+        regex: "^AssumeRoleWithWebIdentity$"
+      - field_name: eventSource
+        regex: "^sts\\.amazonaws\\.com$"
+      - field_name: requestParameters.roleArn
+        regex: ".*:role/.*-eks-.*-irsa-.*"
+
+  # ============================================================================
+  # HIGH-VOLUME LOW-VALUE EVENTS
+  # ============================================================================
+
+  # Filter read-only describe operations from automated tools
+  - name: Automated Tool Describe Operations
+    matches:
+      - field_name: eventName
+        regex: "^Describe.*$"
+      - field_name: readOnly
+        regex: "^true$"
+      - field_name: userAgent
+        regex: "^(aws-cli|boto3|aws-sdk-go|aws-sdk-java).*$"
+      - field_name: errorCode
+        regex: "^(AccessDenied|UnauthorizedOperation)$"
+
+  # Filter CloudFormation drift detection
+  - name: CloudFormation Drift Detection
+    matches:
+      - field_name: eventSource
+        regex: "^cloudformation\\.amazonaws\\.com$"
+      - field_name: eventName
+        regex: "^(DetectStackDrift|DescribeStackDriftDetectionStatus)$"
+      - field_name: userIdentity.type
+        regex: "^AssumedRole$"
