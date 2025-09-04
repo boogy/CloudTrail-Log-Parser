@@ -52,5 +52,5 @@ require (
 	github.com/aws/smithy-go v1.23.0 // indirect
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/segmentio/encoding v0.5.3
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.11.1
 )
