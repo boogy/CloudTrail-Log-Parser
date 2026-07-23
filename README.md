@@ -4,6 +4,9 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![AWS Lambda](https://img.shields.io/badge/AWS-Lambda-orange?style=flat&logo=amazon-aws)](https://aws.amazon.com/lambda/)
 
+> [!WARNING]
+> **This repository is no longer maintained. Please use the similar project https://github.com/boogy/cloudtrail-rs**
+
 A high-performance, cost-optimized CloudTrail log processor designed to filter and reduce noise in AWS CloudTrail logs before they reach your SIEM or logging infrastructure. This solution can significantly reduce logging costs by filtering out unnecessary events while maintaining security and compliance requirements.
 
 > **Credits**: Based on the excellent work by [Mark Wolfe](https://github.com/wolfeidau) and his [cloudtrail-log-processor](https://github.com/wolfeidau/cloudtrail-log-processor/tree/master) project, enhanced with Lambda optimizations, modular configuration, and enterprise features.
